@@ -5,12 +5,12 @@ from os.path import isfile
 from os.path import isdir
 import random
 from omxplayer.player import OMXPlayer
-# from pathlib import Path
 from time import sleep
 
-# Path to media hard drive
-path = "/media/pi/Untitled"
-movies = path + "/Movies/*"
+# TODO
+# 1. Choose random episodes by show rather than file to prevent long series from taking over the server
+# 2. Write schedule by getting current day, play movies on Sundays etc.
+# 3. Find way to sort shows by type, to play episodes by type (cartoons on saturday, for example)
 
 
 
@@ -20,9 +20,23 @@ def isVideo(file):
     else:
         return False
 
+def handleDirectory(directory, currentPath, fileList):
+    for item in directory:
+        if isfile(item):
+            fileList.append(currentPath + '/' + item)
+
+
+
+def buildTVShowListNew():
+    # id like to simplify the old version but not entirely sure how to do that yet
+    showsList = []
+    showsPath = "/media/pi/Untitled/TV Shows"
+    os.chdir(showsPath)
+    handleDirectory(os.listdir(), os.getcwd(), showsList)
 
 
 def buildMovieList():
+    movies = "/media/pi/Untitled/Movies/*"
     # Get list of files in movie directory
     tempMovieList = glob.glob(movies)
     trueMovieList = []
