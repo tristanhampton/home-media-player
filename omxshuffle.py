@@ -1,4 +1,4 @@
-# Import the os module
+# Import modules
 import os
 import glob
 from os.path import isfile
@@ -6,11 +6,21 @@ from os.path import isdir
 import random
 from omxplayer.player import OMXPlayer
 from time import sleep
+from pprint import pprint;
 
 # TODO
 # 1. Choose random episodes by show rather than file to prevent long series from taking over the server
 # 2. Write schedule by getting current day, play movies on Sundays etc.
 # 3. Find way to sort shows by type, to play episodes by type (cartoons on saturday, for example)
+# 4. When video is nearly done, start a second instance of omx player behind the scenes, and reveal it when the first instance os over
+# to prevent the gap between videos
+
+
+def stopAllOMXInstances():
+    try:
+        os.system('killall omxplayer.bin && pkill python && pgrep python && kill $(pgrep omxplayer)');
+    except:
+        print('Something went wrong. There was likely no player running in the killall process');
 
 
 
@@ -20,19 +30,67 @@ def isVideo(file):
     else:
         return False
 
-def handleDirectory(directory, currentPath, fileList):
-    for item in directory:
-        if isfile(item):
-            fileList.append(currentPath + '/' + item)
 
-
-
-def buildTVShowListNew():
-    # id like to simplify the old version but not entirely sure how to do that yet
-    showsList = []
+def buildTVShowList():
+    showsDictionary = {}
     showsPath = "/media/pi/Untitled/TV Shows"
     os.chdir(showsPath)
-    handleDirectory(os.listdir(), os.getcwd(), showsList)
+    for series in os.listdir():
+        if not isfile(series) and not series.startswith('.'):
+            firstLevelPath = showsPath + '/' + series; # /media/pi/Untitled/TV Shows/Parks and Rec
+            os.chdir(firstLevelPath);
+            episodes = []
+            for firstItem in os.listdir():
+                # might have episodes here, so handle that
+                if isVideo(firstItem):
+                    episodes.append(firstItem);
+                elif not isfile(firstItem):
+                    secondLevelPath = firstLevelPath + '/' + firstItem; # /media/pi/Untitled/TV Shows/Parks and Rec/Season 01/
+                    os.chdir(secondLevelPath)
+                    for secondItem in os.listdir():
+                        if isVideo(secondItem):
+                            episodes.append(secondLevelPath + '/' + secondItem)
+                        elif not isfile(secondItem):
+                            thirdLevelPath = secondLevelPath + '/' + secondItem;
+                            os.chdir(thirdLevelPath);
+                            for thirdLevelItem in os.listdir():
+                                if isVideo(thirdLevelItem):
+                                    episodes.append(thirdLevelPath + '/' + thirdLevelItem);
+                showsDictionary[series] = episodes
+    return showsDictionary;
+
+def getShowFromList(showList):
+    series = list(showList); # convert dictionary to list for iterating
+    series = random.choice(series);
+    episode = random.choice(showList[series]);
+    return episode
+
+def playVideo(videoPath):
+    try:
+        return OMXPlayer(videoPath);
+    except:
+        return False;
+
+
+def playRandomShowsMk2():
+    stopAllOMXInstances();
+    player = False;
+    shows = buildTVShowList();
+    episode = getShowFromList(shows);
+
+    # this logic can probably be moved into the playVideo function
+    while player == False:
+        player = playVideo(episode);
+
+    while True:
+        showLength = int(player.duration());
+        sleep(showLength);
+        player.quit();
+        player = False;
+        episode = getShowFromList(shows);
+
+        while player  == False:
+            player = playVideo(episode);
 
 
 def buildMovieList():
@@ -64,51 +122,21 @@ def playRandomMovies():
     while True:
         movieLength = player.duration()
         sleep(movieLength)
+        player.stop()
         player = OMXPlayer(random.choice(movies))
 
 
-def buildTVShowList():
-    showsPath = "/media/pi/Untitled/TV Shows/*"
-    showsGlob = glob.glob(showsPath)
-    shows = []
-
-    # print(showsGlob)
-
-    for show in showsGlob:
-        # Each show should be a directory, so move into it to check for episodes or seasons
-        showPath = show
-        os.chdir(showPath)
-        currentFolder = os.listdir()
-
-        for item in currentFolder:
-            # there might be episodes here, but usually seasons. Add episodes to list and continue
-            if isVideo(item):
-                shows.append(showPath + '/' + item)
-            elif isdir(item):
-                showPath = showPath + '/' + item
-                os.chdir(item)
-                currentFolder = os.listdir()
-                for item in currentFolder:
-                    if isVideo(item):
-                        shows.append(showPath + '/' + item)
-                    elif isdir(item):
-                        showpath = showPath + '/' + item
-                        os.chdir(item)
-                        currentFolder = os.listdir();
-                        for item in currentFolder:
-                            if isVideo(item):
-                                shows.append(showPath + '/' + item)
-
-    return shows
-
-
 def playRandomShows():
+    stopAllOMXInstances();
     shows = buildTVShowList();
-    player = OMXPlayer(random.choice(shows))
+    episode = getShowFromList(shows);
+    player = OMXPlayer(episode);
 
     while True:
-        showLength = player.duration();
-        sleep(showLength)
-        player = OMXPlayer(random.choice(shows))
+        showLength = int(player.duration());
+        sleep(showLength);
+        player.quit();
+        episode = getShowFromList(shows);
+        player = OMXPlayer(episode);
 
 
