@@ -7,6 +7,7 @@ import random
 from omxplayer.player import OMXPlayer
 from time import sleep
 from pprint import pprint;
+import datetime;
 
 # TODO
 # 1. Choose random episodes by show rather than file to prevent long series from taking over the server
@@ -23,13 +24,8 @@ def stopAllOMXInstances():
     except:
         print('Something went wrong. There was likely no player running in the killall process');
 
-
-
-def isVideo(file):
-    if file.endswith('.mp4') or file.endswith('.mov') or file.endswith('.avi') or file.endswith('.mkv') and isfile(file):
-        return True
-    else:
-        return False
+def printPlayTime(time):
+    print('playtime: ' + str(datetime.timedelta(seconds=time)));
 
 def buildTVShowList():
     print('building show directory');
@@ -41,6 +37,7 @@ def buildTVShowList():
         seriesName = os.path.basename(os.path.normpath(series));
         episodes = glob(series + '/**/*.mp4', recursive=True) + glob(series + '/**/*.mkv', recursive=True) + glob(series + '/**/*.avi', recursive=True) + glob(series + '/**/*.mov', recursive=True);
         showsDictionary[seriesName] = episodes;
+    return showsDictionary;
 
 def getShowFromList(showList):
     series = list(showList); # convert dictionary to list for iterating
@@ -49,47 +46,34 @@ def getShowFromList(showList):
     pprint(episode);
     return episode;
 
-def playVideo(videoPath):
-    print('initializing video');
-    try:
-        print('attempting to start the video');
-        instance = OMXPlayer(videoPath);
-        showLength = str(instance.duration());
-        pprint(videoPath);
-        pprint('show time: ' + showLength + 's');
-    except Exception as e:
-        print('something went wrong playing' + videoPath + ': ');
-        print(e);
-        instance = False;
-    return instance;
-
-
-def playRandomShowsMk2():
+def playRandomShows():
     stopAllOMXInstances();
-    player = False;
     shows = buildTVShowList();
-    episode = getShowFromList(shows);
     tvPlaying = True;
+    stableEpisode = False;
 
     while tvPlaying:
-        print('show loop start');
-        player = playVideo(episode);
-        if player is not False:
+        while stableEpisode is False:
             try:
-                showLength = int(player.duration());
-                sleep(showLength);
-                player.quit();
-                player = False;
+                print('attempting to find a playable episode.');
                 episode = getShowFromList(shows);
+                player = OMXPlayer(episode);
+                printPlayTime(player.duration())
+                stableEpisode = True;
             except Exception as e:
-                pprint('something went wrong in the show loop: ');
+                stopAllOMXInstances();
+                print('episode wasnt playable.');
                 print(e);
-                tvPlaying = False;
-        else:
-            tvPlaying = False;
+                stableEpisode = False;
+
+        showLength = int(player.duration());
+        sleep(showLength);
+        player.quit();
+        #repeat
 
 
 
+# MOVIES
 def buildMovieList():
     movies = "/media/pi/Untitled/Movies/*"
     # Get list of files in movie directory
