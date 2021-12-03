@@ -1,6 +1,6 @@
 # Import modules
 import os
-import glob
+from glob import glob
 from os.path import isfile
 from os.path import isdir
 import random
@@ -17,8 +17,9 @@ from pprint import pprint;
 
 
 def stopAllOMXInstances():
+    print('stopping all instances of video');
     try:
-        os.system('killall omxplayer.bin && pkill python && pgrep python && kill $(pgrep omxplayer)');
+        os.system('pkill -9 -f "/usr/bin/omxplayer.bin"');
     except:
         print('Something went wrong. There was likely no player running in the killall process');
 
@@ -30,46 +31,37 @@ def isVideo(file):
     else:
         return False
 
-
 def buildTVShowList():
-    showsDictionary = {}
-    showsPath = "/media/pi/Untitled/TV Shows"
-    os.chdir(showsPath)
-    for series in os.listdir():
-        if not isfile(series) and not series.startswith('.'):
-            firstLevelPath = showsPath + '/' + series; # /media/pi/Untitled/TV Shows/Parks and Rec
-            os.chdir(firstLevelPath);
-            episodes = []
-            for firstItem in os.listdir():
-                # might have episodes here, so handle that
-                if isVideo(firstItem):
-                    episodes.append(firstItem);
-                elif not isfile(firstItem):
-                    secondLevelPath = firstLevelPath + '/' + firstItem; # /media/pi/Untitled/TV Shows/Parks and Rec/Season 01/
-                    os.chdir(secondLevelPath)
-                    for secondItem in os.listdir():
-                        if isVideo(secondItem):
-                            episodes.append(secondLevelPath + '/' + secondItem)
-                        elif not isfile(secondItem):
-                            thirdLevelPath = secondLevelPath + '/' + secondItem;
-                            os.chdir(thirdLevelPath);
-                            for thirdLevelItem in os.listdir():
-                                if isVideo(thirdLevelItem):
-                                    episodes.append(thirdLevelPath + '/' + thirdLevelItem);
-                showsDictionary[series] = episodes
-    return showsDictionary;
+    print('building show directory');
+    showsPath = "/media/pi/Untitled/TV Shows";
+    series = glob(showsPath + '/*');
+    showsDictionary = {};
+
+    for series in series:
+        seriesName = os.path.basename(os.path.normpath(series));
+        episodes = glob(series + '/**/*.mp4', recursive=True) + glob(series + '/**/*.mkv', recursive=True) + glob(series + '/**/*.avi', recursive=True) + glob(series + '/**/*.mov', recursive=True);
+        showsDictionary[seriesName] = episodes;
 
 def getShowFromList(showList):
     series = list(showList); # convert dictionary to list for iterating
     series = random.choice(series);
     episode = random.choice(showList[series]);
-    return episode
+    pprint(episode);
+    return episode;
 
 def playVideo(videoPath):
+    print('initializing video');
     try:
-        return OMXPlayer(videoPath);
-    except:
-        return False;
+        print('attempting to start the video');
+        instance = OMXPlayer(videoPath);
+        showLength = str(instance.duration());
+        pprint(videoPath);
+        pprint('show time: ' + showLength + 's');
+    except Exception as e:
+        print('something went wrong playing' + videoPath + ': ');
+        print(e);
+        instance = False;
+    return instance;
 
 
 def playRandomShowsMk2():
@@ -77,20 +69,25 @@ def playRandomShowsMk2():
     player = False;
     shows = buildTVShowList();
     episode = getShowFromList(shows);
+    tvPlaying = True;
 
-    # this logic can probably be moved into the playVideo function
-    while player == False:
+    while tvPlaying:
+        print('show loop start');
         player = playVideo(episode);
+        if player is not False:
+            try:
+                showLength = int(player.duration());
+                sleep(showLength);
+                player.quit();
+                player = False;
+                episode = getShowFromList(shows);
+            except Exception as e:
+                pprint('something went wrong in the show loop: ');
+                print(e);
+                tvPlaying = False;
+        else:
+            tvPlaying = False;
 
-    while True:
-        showLength = int(player.duration());
-        sleep(showLength);
-        player.quit();
-        player = False;
-        episode = getShowFromList(shows);
-
-        while player  == False:
-            player = playVideo(episode);
 
 
 def buildMovieList():
@@ -110,13 +107,12 @@ def buildMovieList():
                 if file.endswith('.mp4') or file.endswith('.mkv') or file.endswith('.avi'):
                     filePath = cPath + '/' +  file
                     trueMovieList.append(filePath)
-
+    pprint(trueMovieList);
     return trueMovieList;
 
 
 def playRandomMovies():
     movies = buildMovieList()
-    # play random movie
     player = OMXPlayer(random.choice(movies))
 
     while True:
@@ -124,19 +120,5 @@ def playRandomMovies():
         sleep(movieLength)
         player.stop()
         player = OMXPlayer(random.choice(movies))
-
-
-def playRandomShows():
-    stopAllOMXInstances();
-    shows = buildTVShowList();
-    episode = getShowFromList(shows);
-    player = OMXPlayer(episode);
-
-    while True:
-        showLength = int(player.duration());
-        sleep(showLength);
-        player.quit();
-        episode = getShowFromList(shows);
-        player = OMXPlayer(episode);
 
 
