@@ -10,7 +10,6 @@ from pprint import pprint;
 import datetime;
 
 # TODO
-# 1. Choose random episodes by show rather than file to prevent long series from taking over the server
 # 2. Write schedule by getting current day, play movies on Sundays etc.
 # 3. Find way to sort shows by type, to play episodes by type (cartoons on saturday, for example)
 # 4. When video is nearly done, start a second instance of omx player behind the scenes, and reveal it when the first instance os over
@@ -50,9 +49,9 @@ def playRandomShows():
     stopAllOMXInstances();
     shows = buildTVShowList();
     tvPlaying = True;
-    stableEpisode = False;
 
     while tvPlaying:
+        stableEpisode = False;
         while stableEpisode is False:
             try:
                 print('attempting to find a playable episode.');

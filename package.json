@@ -1,0 +1,20 @@
+{
+  "name": "home-media-player",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "upload": "scp omxshuffle.py pi@10.0.0.36:omxshuffle.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tristanhampton/home-media-player.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tristanhampton/home-media-player/issues"
+  },
+  "homepage": "https://github.com/tristanhampton/home-media-player#readme"
+}
