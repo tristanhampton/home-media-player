@@ -20,13 +20,18 @@ def stopAllOMXInstances():
     print('stopping all instances of video');
     try:
         os.system('pkill -9 -f "/usr/bin/omxplayer.bin"');
+        return
     except:
         print('Something went wrong. There was likely no player running in the killall process');
+    return
 
 def printPlayTime(time):
     print('playtime: ' + str(datetime.timedelta(seconds=time)));
+    return
+
 
 def buildTVShowList():
+    # Builds a dictionary of shows, organized by series
     print('building show directory');
     showsPath = "/media/pi/Untitled/TV Shows";
     series = glob(showsPath + '/*');
@@ -74,24 +79,11 @@ def playRandomShows():
 
 # MOVIES
 def buildMovieList():
-    movies = "/media/pi/Untitled/Movies/*"
-    # Get list of files in movie directory
-    tempMovieList = glob.glob(movies)
-    trueMovieList = []
-
-    # go through files, if it's a file add to array. if not, go into folder and check for files and add
-    for movie in tempMovieList:
-        if isfile(movie):
-            trueMovieList.append(movie)
-        else:
-            cPath = movie
-            os.chdir(movie)
-            for file in os.listdir():
-                if file.endswith('.mp4') or file.endswith('.mkv') or file.endswith('.avi'):
-                    filePath = cPath + '/' +  file
-                    trueMovieList.append(filePath)
-    pprint(trueMovieList);
-    return trueMovieList;
+    # Builds a list of movies, ignores directories
+    print('building movie directory');
+    path = "/media/pi/Untitled/Movies";
+    movies = glob(path + '/*.mkv') + glob(path + '/*.avi') + glob(path + '/*.mp4');
+    return movies;
 
 
 def playRandomMovies():
@@ -104,4 +96,14 @@ def playRandomMovies():
         player.stop()
         player = OMXPlayer(random.choice(movies))
 
+def playMovie(title):
+    stopAllOMXInstances();
+    movies = buildMovieList();
 
+    for movie in movies:
+        if title in movie:
+            print('Searched for ' + title);
+            print('found movie:' + movie);
+            OMXPlayer(movie);
+            break;
+    return

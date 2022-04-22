@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "upload": "scp omxshuffle.py pi@10.0.0.36:omxshuffle.py"
+    "upload": "scp omxshuffle.py pi@10.0.0.36:omxshuffle.py",
+    "play": "ssh pi@10.0.0.36 \"python3 -c 'from omxshuffle import playRandomShows; playRandomShows()'\""
   },
   "repository": {
     "type": "git",
